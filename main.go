@@ -1,13 +1,20 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"time"
 
+	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/samceena/data-schema-encoding-decoding/gen-go/event"
 	"github.com/vmihailenco/msgpack/v5"
+
+	// Protofbuf
+	"github.com/samceena/data-schema-encoding-decoding/gen-go/eventpb"
+	"google.golang.org/protobuf/proto"
 )
 
 type Event struct {
@@ -46,6 +53,47 @@ func defaultEvent() Event {
 	}
 }
 
+// for thrift
+func toThriftEvent(e Event) *event.Event {
+	return &event.Event{
+		ID:        e.ID,
+		Username:  e.Username,
+		Action:    e.Action,
+		Timestamp: e.Timestamp,
+		Metadata:  e.Metadata,
+	}
+}
+
+func encodeThrift(e Event) []byte {
+	thriftEvent := toThriftEvent(e)
+	transport := thrift.NewTMemoryBuffer()
+	protocol := thrift.NewTBinaryProtocolConf(transport, nil)
+	if err := thriftEvent.Write(context.Background(), protocol); err != nil {
+		log.Fatal("thrift encode error: %w", err)
+	}
+	return transport.Bytes()
+}
+
+// for protobuff
+func toProtoEvent(e Event) *eventpb.Event {
+	return &eventpb.Event{
+		Id:        e.ID,
+		Username:  e.Username,
+		Action:    e.Action,
+		Timestamp: e.Timestamp,
+		Metadata:  e.Metadata,
+	}
+}
+
+func encodeProtobuff(e Event) []byte {
+	protoEvent := toProtoEvent(e)
+	data, err := proto.Marshal(protoEvent)
+	if err != nil {
+		log.Fatalf("Error encoding event to protobuff: %w", err)
+	}
+	return data
+}
+
 func main() {
 
 	username := flag.String("username", "", "override default username")
@@ -68,10 +116,18 @@ func main() {
 	fmt.Println("Encoded Data:")
 	fmt.Println("jsonDataEncoded: ", jsonDataEncoded)
 	fmt.Println("messagePackDataENcoded: ", messagePackDataENcoded)
+	thrifted := encodeThrift(event)
+	fmt.Println("----")
+
+	// Protobuff
+	protoBuffEncoded := encodeProtobuff(event)
+	fmt.Println("protoBuffEncoded: ", protoBuffEncoded)
 	fmt.Println("----")
 
 	fmt.Println("sizes:")
 	fmt.Println("Json Data Encoded size: ", len(jsonDataEncoded))
 	fmt.Println("MessagePackData ENcoded size: ", len(messagePackDataENcoded))
+	fmt.Println("Thrift ENcoded size: ", len(thrifted))
+	fmt.Println("ProtoBuff ENcoded size: ", len(protoBuffEncoded))
 
 }

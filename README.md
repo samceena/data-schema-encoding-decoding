@@ -43,3 +43,59 @@ _____
 `go run main.go`
 or 
 `go run main.go --username jone`
+
+
+to encode and decode thrift:
+-  you need to install the thrift compiler for mac i used: `brew install thrift`
+- Create the thrift schema file event: `touch event.thrift` and add code:
+```
+ namespace go event
+
+  struct Event {
+    1: i64 id
+    2: string username
+    3: string action
+    4: i64 timestamp
+    5: map<string, string> metadata
+  }
+```
+
+- Generate the golang code from the file above with: `thrift -r --gen go event.thrift`: 
+gen-go/event/ will be created with the proper Go code.
+
+- Add the code to the porject: 
+```
+        "github.com/apache/thrift/lib/go/thrift"
+        "github.com/samceena/data-schema-encoding-decoding/gen-go/event"
+```
+
+Encode and decode Protobuff:
+Protobuff works in 2 steps:
+- define a schema in .proto file
+- Generate go code from the schema using protoc compiler
+the compiler reads the .proto file and generates Go code with serialization/desrialixation methods built in.
+You can also doa all these manualyl, type it out, but it's quite a lot of work to do that for this demo.
+Steps:
+1. install
+  ```
+  brew install protobuf
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+  ```
+2. Check it's working:
+```
+  protoc --version
+  protoc-gen-go --version
+```
+3. Gen go code `protoc --go_out=gen-go/eventpb --go_opt=paths=source_relative event.proto`
+
+
+
+Schemaless:
+- JSON
+MessagePack
+
+
+Schema based:
+- Thrift
+- Avro
+- protobuff
