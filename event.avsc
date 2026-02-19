@@ -1,0 +1,12 @@
+{                     
+  "type": "record",                
+  "name": "Event",                
+  "namespace": "event",           
+  "fields": [
+    {"name": "id", "type": "long"},
+    {"name": "username", "type": "string"},
+    {"name": "action", "type": "string"},
+    {"name": "timestamp", "type": "long"},
+    {"name": "metadata", "type": {"type": "map", "values": "string"}}
+  ]
+}

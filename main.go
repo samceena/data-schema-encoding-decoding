@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	// Thrift
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/samceena/data-schema-encoding-decoding/gen-go/event"
 	"github.com/vmihailenco/msgpack/v5"
@@ -15,6 +16,9 @@ import (
 	// Protofbuf
 	"github.com/samceena/data-schema-encoding-decoding/gen-go/eventpb"
 	"google.golang.org/protobuf/proto"
+
+	// Avro
+	"github.com/linkedin/goavro/v2"
 )
 
 type Event struct {
@@ -94,6 +98,38 @@ func encodeProtobuff(e Event) []byte {
 	return data
 }
 
+func encodeAvro(e Event) []byte {
+	schema := `{
+		"type": "record",
+		"name": "Event",
+		"namespace": "event",
+		"fields": [
+			{"name": "id", "type": "long"},
+			{"name": "username", "type": "string"},
+			{"name": "action", "type": "string"},
+			{"name": "timestamp", "type": "long"},
+			{"name": "metadata", "type": {"type": "map", "values": "string"}}
+		]
+	}`
+
+	codec, err := goavro.NewCodec(schema)
+	if err != nil {
+		log.Fatalf("Avro schema error : %w", err)
+	}
+
+	data, err := codec.BinaryFromNative(nil, map[string]interface{}{
+		"id":        e.ID,
+		"username":  e.Username,
+		"action":    e.Action,
+		"timestamp": e.Timestamp,
+		"metadata":  e.Metadata,
+	})
+	if err != nil {
+		log.Fatalf("avro encode error: %w", err)
+	}
+	return data
+}
+
 func main() {
 
 	username := flag.String("username", "", "override default username")
@@ -124,10 +160,16 @@ func main() {
 	fmt.Println("protoBuffEncoded: ", protoBuffEncoded)
 	fmt.Println("----")
 
+	// Protobuff
+	avro := encodeAvro(event)
+	fmt.Println("avroEncoded: ", avro)
+	fmt.Println("----")
+
 	fmt.Println("sizes:")
 	fmt.Println("Json Data Encoded size: ", len(jsonDataEncoded))
 	fmt.Println("MessagePackData ENcoded size: ", len(messagePackDataENcoded))
 	fmt.Println("Thrift ENcoded size: ", len(thrifted))
 	fmt.Println("ProtoBuff ENcoded size: ", len(protoBuffEncoded))
+	fmt.Println("Avro ENcoded size: ", len(avro))
 
 }
